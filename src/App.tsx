@@ -22,11 +22,25 @@ function App() {
   // Check for existing user session on app load
   useEffect(() => {
     const savedUser = localStorage.getItem('weaponguard_user');
+    const savedDetections = localStorage.getItem('weaponguard_detections');
+    
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
+    
+    if (savedDetections) {
+      setDetections(JSON.parse(savedDetections));
+    }
+    
     setIsLoading(false);
   }, []);
+
+  // Save detections to localStorage whenever they change
+  useEffect(() => {
+    if (detections.length > 0) {
+      localStorage.setItem('weaponguard_detections', JSON.stringify(detections));
+    }
+  }, [detections]);
 
   const mockStats: AlertStats = {
     total: detections.length,
@@ -52,7 +66,14 @@ function App() {
     localStorage.removeItem('weaponguard_user');
     setDetections([]);
     setNotifications([]);
+    localStorage.removeItem('weaponguard_detections');
     setActiveTab('upload');
+  };
+
+  const clearDetectionHistory = () => {
+    setDetections([]);
+    localStorage.removeItem('weaponguard_detections');
+    addNotification('Detection history cleared successfully', 'success');
   };
 
   const addNotification = (message: string, type: 'success' | 'warning' | 'error' | 'info' = 'info') => {
@@ -162,7 +183,7 @@ function App() {
         return (
           <div className="space-y-8">
             <FileUpload onFileUpload={handleFileUpload} isProcessing={isProcessing} />
-            <DetectionResults detections={detections} />
+            <DetectionResults detections={detections.slice(0, 3)} />
           </div>
         );
       case 'live':
@@ -172,7 +193,14 @@ function App() {
       case 'analytics':
         return <Analytics detections={detections} />;
       case 'history':
-        return <DetectionResults detections={detections} />;
+        return (
+          <DetectionResults 
+            detections={detections} 
+            onClearHistory={clearDetectionHistory}
+            showBackButton={true}
+            onBack={() => setActiveTab('upload')}
+          />
+        );
       case 'settings':
         return <Settings user={user} onLogout={handleLogout} />;
       default:

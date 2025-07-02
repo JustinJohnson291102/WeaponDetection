@@ -1,13 +1,24 @@
-import React from 'react';
-import { AlertTriangle, CheckCircle, Clock, Target, Eye } from 'lucide-react';
+import React, { useState } from 'react';
+import { AlertTriangle, CheckCircle, Clock, Target, Eye, Trash2, ArrowLeft, Filter } from 'lucide-react';
 import { Detection } from '../types';
 import { WEAPON_CLASSES, THREAT_LEVELS } from '../constants/weapons';
 
 interface DetectionResultsProps {
   detections: Detection[];
+  onClearHistory?: () => void;
+  showBackButton?: boolean;
+  onBack?: () => void;
 }
 
-export const DetectionResults: React.FC<DetectionResultsProps> = ({ detections }) => {
+export const DetectionResults: React.FC<DetectionResultsProps> = ({ 
+  detections, 
+  onClearHistory,
+  showBackButton = false,
+  onBack
+}) => {
+  const [filterThreat, setFilterThreat] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'threat'>('newest');
+
   const getThreatIcon = (level: string) => {
     switch (level) {
       case 'critical':
@@ -25,28 +36,143 @@ export const DetectionResults: React.FC<DetectionResultsProps> = ({ detections }
     return new Date(timestamp).toLocaleString();
   };
 
+  // Filter and sort detections
+  const filteredDetections = detections
+    .filter(detection => {
+      if (filterThreat === 'all') return true;
+      return detection.threatLevel === filterThreat;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+        case 'oldest':
+          return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+        case 'threat':
+          const threatOrder = { critical: 4, high: 3, medium: 2, low: 1 };
+          return threatOrder[b.threatLevel as keyof typeof threatOrder] - threatOrder[a.threatLevel as keyof typeof threatOrder];
+        default:
+          return 0;
+      }
+    });
+
   if (detections.length === 0) {
     return (
-      <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-        <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-xl font-semibold text-gray-600 mb-2">No Detections Yet</h3>
-        <p className="text-gray-500">Upload files to start YOLOv5 weapon detection analysis</p>
+      <div className="space-y-6">
+        {showBackButton && (
+          <button
+            onClick={onBack}
+            className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Dashboard</span>
+          </button>
+        )}
+        
+        <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+          <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-gray-600 mb-2">No Detections Yet</h3>
+          <p className="text-gray-500">Upload files to start YOLOv5 weapon detection analysis</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      {/* Header with Back Button and Controls */}
       <div className="flex items-center justify-between">
-        <h3 className="text-xl font-bold text-gray-900">YOLOv5 Detection Results</h3>
-        <div className="flex items-center space-x-2 text-sm text-gray-600">
-          <Eye className="w-4 h-4" />
-          <span>{detections.length} files analyzed</span>
+        <div className="flex items-center space-x-4">
+          {showBackButton && (
+            <button
+              onClick={onBack}
+              className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
+            </button>
+          )}
+          <div>
+            <h3 className="text-xl font-bold text-gray-900">Detection History</h3>
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <Eye className="w-4 h-4" />
+              <span>{filteredDetections.length} of {detections.length} results</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-3">
+          {/* Filters */}
+          <div className="flex items-center space-x-2">
+            <Filter className="w-4 h-4 text-gray-500" />
+            <select
+              value={filterThreat}
+              onChange={(e) => setFilterThreat(e.target.value)}
+              className="text-sm border border-gray-300 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Threats</option>
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'newest' | 'oldest' | 'threat')}
+            className="text-sm border border-gray-300 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="threat">By Threat Level</option>
+          </select>
+
+          {onClearHistory && (
+            <button
+              onClick={() => {
+                if (window.confirm('Are you sure you want to clear all detection history? This action cannot be undone.')) {
+                  onClearHistory();
+                }
+              }}
+              className="flex items-center space-x-2 px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Clear History</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Stats Summary */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <p className="text-2xl font-bold text-gray-900">{detections.length}</p>
+          <p className="text-gray-600 text-sm">Total Files</p>
+        </div>
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <p className="text-2xl font-bold text-red-600">
+            {detections.filter(d => d.detectedClasses.length > 0).length}
+          </p>
+          <p className="text-gray-600 text-sm">Threats Found</p>
+        </div>
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <p className="text-2xl font-bold text-orange-600">
+            {detections.filter(d => d.threatLevel === 'critical').length}
+          </p>
+          <p className="text-gray-600 text-sm">Critical</p>
+        </div>
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <p className="text-2xl font-bold text-green-600">
+            {detections.filter(d => d.detectedClasses.length === 0).length}
+          </p>
+          <p className="text-gray-600 text-sm">Clean Files</p>
         </div>
       </div>
       
+      {/* Detection Results */}
       <div className="grid gap-6">
-        {detections.map((detection) => (
+        {filteredDetections.map((detection) => (
           <div key={detection.id} className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
             {/* Header Section */}
             <div className="p-6 border-b border-gray-100">
@@ -181,6 +307,12 @@ export const DetectionResults: React.FC<DetectionResultsProps> = ({ detections }
                         <span>Classes Detected:</span>
                         <span className="font-medium text-gray-900">{detection.detectedClasses.length}</span>
                       </div>
+                      <div className="flex justify-between">
+                        <span>Threat Level:</span>
+                        <span className={`font-medium`} style={{ color: THREAT_LEVELS[detection.threatLevel].color }}>
+                          {detection.threatLevel.toUpperCase()}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -189,6 +321,14 @@ export const DetectionResults: React.FC<DetectionResultsProps> = ({ detections }
           </div>
         ))}
       </div>
+
+      {filteredDetections.length === 0 && detections.length > 0 && (
+        <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+          <Filter className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-gray-600 mb-2">No Results Found</h3>
+          <p className="text-gray-500">Try adjusting your filters to see more results</p>
+        </div>
+      )}
     </div>
   );
 };
