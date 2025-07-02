@@ -32,3 +32,19 @@ export interface WeaponClass {
   color: string;
   icon: string;
 }
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'user';
+  createdAt: string;
+}
+
+export interface Notification {
+  id: string;
+  message: string;
+  type: 'success' | 'warning' | 'error' | 'info';
+  timestamp: string;
+  read: boolean;
+}
