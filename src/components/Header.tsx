@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Bell, Settings, User, X, Check, Trash2 } from 'lucide-react';
+import { Shield, Bell, Settings, User, X, Check, Trash2, LogOut, UserCircle, BarChart3 } from 'lucide-react';
 import { User as UserType, Notification } from '../types';
 
 interface HeaderProps {
@@ -8,6 +8,7 @@ interface HeaderProps {
   onMarkAsRead: (id: string) => void;
   onClearAll: () => void;
   user: UserType;
+  onLogout: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ 
@@ -15,9 +16,11 @@ export const Header: React.FC<HeaderProps> = ({
   notifications, 
   onMarkAsRead, 
   onClearAll, 
-  user 
+  user,
+  onLogout
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -136,14 +139,87 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* User Profile */}
-          <div className="flex items-center space-x-3">
-            <div className="text-right">
-              <p className="text-sm font-medium text-gray-900">{user.name}</p>
-              <p className="text-xs text-gray-500">{user.role}</p>
-            </div>
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center border">
-              <User className="w-5 h-5 text-blue-600" />
-            </div>
+          <div className="relative">
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <div className="text-right">
+                <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+              </div>
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center border">
+                <User className="w-5 h-5 text-blue-600" />
+              </div>
+            </button>
+
+            {/* User Menu Dropdown */}
+            {showUserMenu && (
+              <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 z-50">
+                <div className="p-4 border-b border-gray-200">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                      <User className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900">{user.name}</p>
+                      <p className="text-sm text-gray-500">{user.email}</p>
+                      <p className="text-xs text-blue-600 capitalize">{user.role} Account</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-2">
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      // Navigate to profile settings
+                    }}
+                    className="w-full flex items-center space-x-3 px-3 py-2 text-left hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <UserCircle className="w-4 h-4 text-gray-500" />
+                    <span className="text-gray-700">View Profile</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      // Navigate to analytics
+                    }}
+                    className="w-full flex items-center space-x-3 px-3 py-2 text-left hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <BarChart3 className="w-4 h-4 text-gray-500" />
+                    <span className="text-gray-700">My Analytics</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      // Navigate to settings
+                    }}
+                    className="w-full flex items-center space-x-3 px-3 py-2 text-left hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <Settings className="w-4 h-4 text-gray-500" />
+                    <span className="text-gray-700">Settings</span>
+                  </button>
+
+                  <hr className="my-2" />
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      if (window.confirm('Are you sure you want to logout?')) {
+                        onLogout();
+                      }
+                    }}
+                    className="w-full flex items-center space-x-3 px-3 py-2 text-left hover:bg-red-50 rounded-lg transition-colors text-red-600"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

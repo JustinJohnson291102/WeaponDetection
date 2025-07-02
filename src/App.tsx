@@ -110,13 +110,24 @@ function App() {
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await fetch('http://localhost:8000/detect', {
-          method: 'POST',
-          body: formData,
-        });
+        // Check if backend is running
+        let response;
+        try {
+          response = await fetch('http://localhost:8000/detect', {
+            method: 'POST',
+            body: formData,
+            headers: {
+              // Don't set Content-Type, let browser set it with boundary for FormData
+            }
+          });
+        } catch (fetchError) {
+          // Backend not running, show helpful error
+          throw new Error('Backend server not running. Please start the Python backend server on port 8000.');
+        }
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          const errorText = await response.text();
+          throw new Error(`Server error (${response.status}): ${errorText}`);
         }
 
         const result = await response.json();
@@ -153,10 +164,19 @@ function App() {
       }
     } catch (error) {
       console.error('Detection failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       addNotification(
-        `❌ Detection failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `❌ Detection failed: ${errorMessage}`,
         'error'
       );
+      
+      // Show helpful message for common errors
+      if (errorMessage.includes('Backend server not running')) {
+        addNotification(
+          '💡 To fix: Run "cd backend && python app.py" in terminal to start the server',
+          'info'
+        );
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -223,6 +243,7 @@ function App() {
         onMarkAsRead={markNotificationAsRead}
         onClearAll={clearAllNotifications}
         user={user}
+        onLogout={handleLogout}
       />
       <div className="flex">
         <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
